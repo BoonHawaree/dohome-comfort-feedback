@@ -1,0 +1,16 @@
+{
+  "name": "DoHome Comfort Feedback",
+  "short_name": "Comfort",
+  "description": "Report your comfort level in store zones",
+  "start_url": "/dohome-phuket",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0E7EE4",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

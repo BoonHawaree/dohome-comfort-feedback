@@ -4,12 +4,12 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, ThumbsUp, Snowflake } from 'lucide-react';
 import { FeedbackType } from '@/types';
+import { getCurrentSlot, getCompletedSlots, markSlotDone } from '@/lib/time-slots';
 
 interface FeedbackPanelProps {
   selectedZoneId: string | null;
-  cooldownRemaining: number;
-  currentFeedback: FeedbackType | null;
   onSubmit: (zoneId: string, feedback: FeedbackType) => boolean;
+  onSlotComplete: () => void; // notify parent to refresh tracker
 }
 
 const options: {
@@ -18,69 +18,65 @@ const options: {
   icon: typeof Flame;
   color: string;
   bgColor: string;
-  borderColor: string;
 }[] = [
-  {
-    type: 'too_hot',
-    label: 'Too Hot',
-    icon: Flame,
-    color: '#EF4337',
-    bgColor: '#FEE2E2',
-    borderColor: '#FECACA',
-  },
-  {
-    type: 'comfort',
-    label: 'Comfort',
-    icon: ThumbsUp,
-    color: '#43A452',
-    bgColor: '#DCFCE7',
-    borderColor: '#BBF7D0',
-  },
-  {
-    type: 'too_cold',
-    label: 'Too Cold',
-    icon: Snowflake,
-    color: '#065BA9',
-    bgColor: '#DBEAFE',
-    borderColor: '#BFDBFE',
-  },
+  { type: 'too_hot', label: 'Too Hot', icon: Flame, color: '#EF4337', bgColor: '#FEE2E2' },
+  { type: 'comfort', label: 'Comfort', icon: ThumbsUp, color: '#43A452', bgColor: '#DCFCE7' },
+  { type: 'too_cold', label: 'Too Cold', icon: Snowflake, color: '#065BA9', bgColor: '#DBEAFE' },
 ];
 
 export default function FeedbackPanel({
   selectedZoneId,
-  cooldownRemaining,
-  currentFeedback,
   onSubmit,
+  onSlotComplete,
 }: FeedbackPanelProps) {
   const [selected, setSelected] = useState<FeedbackType | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [slotAlreadyDone, setSlotAlreadyDone] = useState(false);
 
-  const hasCooldown = cooldownRemaining > 0;
-  const cooldownSec = Math.ceil(cooldownRemaining / 1000);
   const isActive = selectedZoneId !== null;
 
-  // Reset selection when zone changes
+  // Reset on zone change + check if current slot already submitted
   useEffect(() => {
     setSelected(null);
     setShowSuccess(false);
+    if (selectedZoneId) {
+      const currentSlot = getCurrentSlot();
+      if (currentSlot) {
+        const done = getCompletedSlots(selectedZoneId);
+        setSlotAlreadyDone(done.has(currentSlot.id));
+      } else {
+        setSlotAlreadyDone(false);
+      }
+    } else {
+      setSlotAlreadyDone(false);
+    }
   }, [selectedZoneId]);
 
-  const activeSelection = selected;
-
   const handleTap = useCallback((type: FeedbackType) => {
-    if (!isActive || hasCooldown) return;
+    if (!isActive || slotAlreadyDone) return;
     setSelected(type);
-  }, [isActive, hasCooldown]);
+  }, [isActive, slotAlreadyDone]);
 
   const handleSubmit = useCallback(() => {
-    if (!selectedZoneId || !activeSelection || hasCooldown) return;
-    const ok = onSubmit(selectedZoneId, activeSelection);
+    if (!selectedZoneId || !selected || slotAlreadyDone) return;
+    const ok = onSubmit(selectedZoneId, selected);
     if (ok) {
+      // Mark the current time slot as done
+      const currentSlot = getCurrentSlot();
+      if (currentSlot) {
+        markSlotDone(selectedZoneId, currentSlot.id);
+      }
       setShowSuccess(true);
       setSelected(null);
+      setSlotAlreadyDone(true);
+      onSlotComplete();
       setTimeout(() => setShowSuccess(false), 2500);
     }
-  }, [selectedZoneId, activeSelection, hasCooldown, onSubmit]);
+  }, [selectedZoneId, selected, slotAlreadyDone, onSubmit, onSlotComplete]);
+
+  const currentSlot = getCurrentSlot();
+  const disabled = !isActive || slotAlreadyDone;
+  const noActiveSlot = !currentSlot;
 
   return (
     <div className="px-6 pt-4 pb-2">
@@ -92,30 +88,23 @@ export default function FeedbackPanel({
       <div className="flex gap-3">
         {options.map((opt) => {
           const Icon = opt.icon;
-          const isChosen = activeSelection === opt.type;
+          const isChosen = selected === opt.type;
 
           return (
             <button
               key={opt.type}
               onClick={() => handleTap(opt.type)}
-              disabled={!isActive || hasCooldown}
+              disabled={disabled || noActiveSlot}
               className="flex flex-1 flex-col items-center gap-1.5 rounded-2xl border-2 py-4 transition-all duration-150 active:scale-[0.97]"
               style={{
                 backgroundColor: isChosen ? opt.bgColor : '#F9FAFB',
                 borderColor: isChosen ? opt.color : '#E5E7EB',
-                opacity: !isActive || hasCooldown ? 0.4 : 1,
-                cursor: !isActive || hasCooldown ? 'not-allowed' : 'pointer',
+                opacity: disabled || noActiveSlot ? 0.4 : 1,
+                cursor: disabled || noActiveSlot ? 'not-allowed' : 'pointer',
               }}
             >
-              <Icon
-                size={24}
-                color={opt.color}
-                strokeWidth={isChosen ? 2.5 : 1.8}
-              />
-              <span
-                className="text-[14px] font-semibold"
-                style={{ color: opt.color }}
-              >
+              <Icon size={24} color={opt.color} strokeWidth={isChosen ? 2.5 : 1.8} />
+              <span className="text-[14px] font-semibold" style={{ color: opt.color }}>
                 {opt.label}
               </span>
             </button>
@@ -123,29 +112,34 @@ export default function FeedbackPanel({
         })}
       </div>
 
-      {/* Cooldown notice */}
-      {hasCooldown && (
+      {/* Status messages */}
+      {noActiveSlot && isActive && (
         <p className="mt-2 text-center text-[12px] text-[#9CA3AF]">
-          You can submit again in {cooldownSec}s
+          No active feedback round right now
+        </p>
+      )}
+      {slotAlreadyDone && isActive && !noActiveSlot && (
+        <p className="mt-2 text-center text-[12px] text-[#43A452]">
+          {currentSlot.label} round already submitted
         </p>
       )}
 
       {/* Submit button */}
       <button
         onClick={handleSubmit}
-        disabled={!isActive || !activeSelection || hasCooldown}
+        disabled={!isActive || !selected || slotAlreadyDone || noActiveSlot}
         className="mt-5 w-full rounded-xl py-3.5 text-[16px] font-semibold text-white transition-all duration-150 active:scale-[0.98]"
         style={{
-          background: (!isActive || !activeSelection || hasCooldown)
+          background: (!isActive || !selected || slotAlreadyDone || noActiveSlot)
             ? '#CBD5E1'
             : 'linear-gradient(77.25deg, #0E7EE4 9.22%, #14B8B4 90.78%)',
-          cursor: (!isActive || !activeSelection || hasCooldown) ? 'not-allowed' : 'pointer',
+          cursor: (!isActive || !selected || slotAlreadyDone || noActiveSlot) ? 'not-allowed' : 'pointer',
         }}
       >
         Submit
       </button>
 
-      {/* Success message */}
+      {/* Success */}
       <AnimatePresence>
         {showSuccess && (
           <motion.div

@@ -10,6 +10,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "DoHome Comfort Feedback",
   description: "Report your comfort level in store zones",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Comfort",
+  },
 };
 
 export const viewport: Viewport = {
@@ -17,6 +23,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#0E7EE4",
 };
 
 export default function RootLayout({
@@ -26,6 +33,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="apple-touch-icon" href="/icon.svg" />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
       </body>
