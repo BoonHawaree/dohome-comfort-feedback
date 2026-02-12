@@ -4,13 +4,10 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, ThumbsUp, Snowflake } from 'lucide-react';
 import { FeedbackType } from '@/types';
-import { getCompletedSlots, markSlotDone, TIME_SLOTS } from '@/lib/time-slots';
 
 interface FeedbackPanelProps {
   selectedZoneId: string | null;
-  selectedSlotId: string | null;
   onSubmit: (zoneId: string, feedback: FeedbackType) => boolean;
-  onSlotComplete: () => void;
 }
 
 const options: {
@@ -27,55 +24,38 @@ const options: {
 
 export default function FeedbackPanel({
   selectedZoneId,
-  selectedSlotId,
   onSubmit,
-  onSlotComplete,
 }: FeedbackPanelProps) {
   const [selected, setSelected] = useState<FeedbackType | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [slotAlreadyDone, setSlotAlreadyDone] = useState(false);
 
   const isActive = selectedZoneId !== null;
 
-  // Reset on zone or slot change + check if selected slot already submitted
+  // Reset on zone change
   useEffect(() => {
     setSelected(null);
     setShowSuccess(false);
-    if (selectedZoneId && selectedSlotId) {
-      const done = getCompletedSlots(selectedZoneId);
-      setSlotAlreadyDone(done.has(selectedSlotId));
-    } else {
-      setSlotAlreadyDone(false);
-    }
-  }, [selectedZoneId, selectedSlotId]);
+  }, [selectedZoneId]);
 
   const handleTap = useCallback((type: FeedbackType) => {
-    if (!isActive || slotAlreadyDone || !selectedSlotId) return;
+    if (!isActive) return;
     setSelected(type);
-  }, [isActive, slotAlreadyDone, selectedSlotId]);
+  }, [isActive]);
 
   const handleSubmit = useCallback(() => {
-    if (!selectedZoneId || !selected || slotAlreadyDone || !selectedSlotId) return;
+    if (!selectedZoneId || !selected) return;
     const ok = onSubmit(selectedZoneId, selected);
     if (ok) {
-      markSlotDone(selectedZoneId, selectedSlotId);
       setShowSuccess(true);
       setSelected(null);
-      setSlotAlreadyDone(true);
-      onSlotComplete();
       setTimeout(() => setShowSuccess(false), 2500);
     }
-  }, [selectedZoneId, selected, slotAlreadyDone, selectedSlotId, onSubmit, onSlotComplete]);
-
-  const disabled = !isActive || slotAlreadyDone || !selectedSlotId;
-  const slotLabel = selectedSlotId
-    ? TIME_SLOTS.find((s) => s.id === selectedSlotId)?.label
-    : null;
+  }, [selectedZoneId, selected, onSubmit]);
 
   return (
     <div className="px-5 pt-3 pb-2">
       <label className="mb-2 block text-[13px] font-normal text-[#9CA3AF]">
-        Your Feedback{slotLabel ? ` — ${slotLabel}` : ''}
+        Your Feedback
       </label>
 
       {/* Feedback pills */}
@@ -88,13 +68,13 @@ export default function FeedbackPanel({
             <button
               key={opt.type}
               onClick={() => handleTap(opt.type)}
-              disabled={disabled}
+              disabled={!isActive}
               className="flex flex-1 flex-col items-center gap-1 rounded-2xl border-2 py-3 transition-all duration-150 active:scale-[0.97]"
               style={{
                 backgroundColor: isChosen ? opt.bgColor : '#F9FAFB',
                 borderColor: isChosen ? opt.color : '#E5E7EB',
-                opacity: disabled ? 0.4 : 1,
-                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: !isActive ? 0.4 : 1,
+                cursor: !isActive ? 'not-allowed' : 'pointer',
               }}
             >
               <Icon size={22} color={opt.color} strokeWidth={isChosen ? 2.5 : 1.8} />
@@ -106,28 +86,16 @@ export default function FeedbackPanel({
         })}
       </div>
 
-      {/* Status messages */}
-      {!selectedSlotId && isActive && (
-        <p className="mt-1.5 text-center text-[11px] text-[#9CA3AF]">
-          Select a time slot above
-        </p>
-      )}
-      {slotAlreadyDone && isActive && selectedSlotId && (
-        <p className="mt-1.5 text-center text-[11px] text-[#43A452]">
-          {slotLabel} round already submitted
-        </p>
-      )}
-
       {/* Submit button */}
       <button
         onClick={handleSubmit}
-        disabled={!isActive || !selected || slotAlreadyDone || !selectedSlotId}
+        disabled={!isActive || !selected}
         className="mt-3 w-full rounded-xl py-3 text-[15px] font-semibold text-white transition-all duration-150 active:scale-[0.98]"
         style={{
-          background: (!isActive || !selected || slotAlreadyDone || !selectedSlotId)
+          background: (!isActive || !selected)
             ? '#CBD5E1'
             : 'linear-gradient(77.25deg, #0E7EE4 9.22%, #14B8B4 90.78%)',
-          cursor: (!isActive || !selected || slotAlreadyDone || !selectedSlotId) ? 'not-allowed' : 'pointer',
+          cursor: (!isActive || !selected) ? 'not-allowed' : 'pointer',
         }}
       >
         Submit

@@ -1,33 +1,8 @@
 import { StoreConfig } from '@/types';
 
 // Zone boundaries derived from AHU y-positions in site-devices.ts
-// Expanded x-range to the right: 22 → 85
 const X_LEFT = 22;
-const X_MID = 53.5;
 const X_RIGHT = 85;
-
-// Helper to create left/right zone pair for each AHU row
-function makeZonePair(
-  rowNum: number,
-  ahuId: string,
-  yStart: number,
-  yEnd: number
-): StoreConfig['zones'] {
-  return [
-    {
-      id: `zone-${rowNum}a`,
-      label: `${rowNum}A`,
-      ahuId,
-      polygon: [[X_LEFT, yStart], [X_MID, yStart], [X_MID, yEnd], [X_LEFT, yEnd]],
-    },
-    {
-      id: `zone-${rowNum}b`,
-      label: `${rowNum}B`,
-      ahuId,
-      polygon: [[X_MID, yStart], [X_RIGHT, yStart], [X_RIGHT, yEnd], [X_MID, yEnd]],
-    },
-  ];
-}
 
 export const stores: Record<string, StoreConfig> = {
   'dohome-phuket': {
@@ -35,15 +10,15 @@ export const stores: Record<string, StoreConfig> = {
     name: 'DoHome Phuket',
     floorPlan: '/assets/floor-plans/dohome-phuket/zone_main.png',
     zones: [
-      ...makeZonePair(9, 'ahu_9', 9, 16.75),
-      ...makeZonePair(8, 'ahu_8', 16.75, 24.25),
-      ...makeZonePair(7, 'ahu_7', 24.25, 31.75),
-      ...makeZonePair(6, 'ahu_6', 31.75, 39.25),
-      ...makeZonePair(5, 'ahu_5', 39.25, 46.75),
-      ...makeZonePair(4, 'ahu_4', 46.75, 54.25),
-      ...makeZonePair(3, 'ahu_3', 54.25, 61.75),
-      ...makeZonePair(2, 'ahu_2', 61.75, 69.25),
-      ...makeZonePair(1, 'ahu_1', 69.25, 77),
+      { id: 'zone-9', label: '9', ahuId: 'ahu_9', polygon: [[X_LEFT, 9], [X_RIGHT, 9], [X_RIGHT, 16.75], [X_LEFT, 16.75]] },
+      { id: 'zone-8', label: '8', ahuId: 'ahu_8', polygon: [[X_LEFT, 16.75], [X_RIGHT, 16.75], [X_RIGHT, 24.25], [X_LEFT, 24.25]] },
+      { id: 'zone-7', label: '7', ahuId: 'ahu_7', polygon: [[X_LEFT, 24.25], [X_RIGHT, 24.25], [X_RIGHT, 31.75], [X_LEFT, 31.75]] },
+      { id: 'zone-6', label: '6', ahuId: 'ahu_6', polygon: [[X_LEFT, 31.75], [X_RIGHT, 31.75], [X_RIGHT, 39.25], [X_LEFT, 39.25]] },
+      { id: 'zone-5', label: '5', ahuId: 'ahu_5', polygon: [[X_LEFT, 39.25], [X_RIGHT, 39.25], [X_RIGHT, 46.75], [X_LEFT, 46.75]] },
+      { id: 'zone-4', label: '4', ahuId: 'ahu_4', polygon: [[X_LEFT, 46.75], [X_RIGHT, 46.75], [X_RIGHT, 54.25], [X_LEFT, 54.25]] },
+      { id: 'zone-3', label: '3', ahuId: 'ahu_3', polygon: [[X_LEFT, 54.25], [X_RIGHT, 54.25], [X_RIGHT, 61.75], [X_LEFT, 61.75]] },
+      { id: 'zone-2', label: '2', ahuId: 'ahu_2', polygon: [[X_LEFT, 61.75], [X_RIGHT, 61.75], [X_RIGHT, 69.25], [X_LEFT, 69.25]] },
+      { id: 'zone-1', label: '1', ahuId: 'ahu_1', polygon: [[X_LEFT, 69.25], [X_RIGHT, 69.25], [X_RIGHT, 77], [X_LEFT, 77]] },
     ],
   },
 };

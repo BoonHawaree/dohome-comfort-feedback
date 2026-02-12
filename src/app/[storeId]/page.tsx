@@ -4,11 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { stores } from '@/config/zones';
 import { useFeedback } from '@/hooks/useFeedback';
-import { getCurrentSlot, getCompletedSlots } from '@/lib/time-slots';
 import Header from '@/components/Header';
 import FloorPlanViewer from '@/components/FloorPlanViewer';
 import ZoneSelector from '@/components/ZoneSelector';
-import TimeSlotTracker from '@/components/TimeSlotTracker';
 import FeedbackPanel from '@/components/FeedbackPanel';
 
 export default function StorePage() {
@@ -17,8 +15,6 @@ export default function StorePage() {
   const store = stores[storeId];
 
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [slotRefreshKey, setSlotRefreshKey] = useState(0);
 
   const { submit } = useFeedback(storeId);
 
@@ -29,61 +25,8 @@ export default function StorePage() {
     }
   }, []);
 
-  // Auto-select the current slot on mount and when zone changes
-  useEffect(() => {
-    const current = getCurrentSlot();
-    if (current && selectedZoneId) {
-      const done = getCompletedSlots(selectedZoneId);
-      // Auto-select current slot if not already done
-      if (!done.has(current.id)) {
-        setSelectedSlotId(current.id);
-      } else {
-        setSelectedSlotId(null);
-      }
-    } else if (current) {
-      setSelectedSlotId(current.id);
-    }
-  }, [selectedZoneId, slotRefreshKey]);
-
-  // In-app notification check
-  useEffect(() => {
-    function checkAndNotify() {
-      if (!selectedZoneId || document.hidden) return;
-      const slot = getCurrentSlot();
-      if (!slot) return;
-      const done = getCompletedSlots(selectedZoneId);
-      if (!done.has(slot.id) && Notification.permission === 'granted') {
-        navigator.serviceWorker?.ready.then((reg) => {
-          reg.active?.postMessage({
-            type: 'SHOW_NOTIFICATION',
-            title: 'Comfort Feedback',
-            body: `Time for your ${slot.label.toLowerCase()} check!`,
-          });
-        });
-      }
-    }
-
-    document.addEventListener('visibilitychange', checkAndNotify);
-    const interval = setInterval(checkAndNotify, 5 * 60_000);
-    return () => {
-      document.removeEventListener('visibilitychange', checkAndNotify);
-      clearInterval(interval);
-    };
-  }, [selectedZoneId]);
-
   const handleZoneSelect = useCallback((zoneId: string) => {
     setSelectedZoneId(zoneId);
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  const handleSlotSelect = useCallback((slotId: string) => {
-    setSelectedSlotId(slotId);
-  }, []);
-
-  const handleSlotComplete = useCallback(() => {
-    setSlotRefreshKey((k) => k + 1);
   }, []);
 
   if (!store) {
@@ -101,18 +44,9 @@ export default function StorePage() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col bg-white">
-      {/* Compact header row: title + store name */}
       <Header storeName={store.name} />
 
-      {/* Small time-slot pills above the map */}
-      <TimeSlotTracker
-        zoneId={selectedZoneId}
-        refreshKey={slotRefreshKey}
-        selectedSlotId={selectedSlotId}
-        onSlotSelect={handleSlotSelect}
-      />
-
-      {/* Floor plan - takes most space */}
+      {/* Floor plan */}
       <div className="flex-1 px-3 pt-1">
         <FloorPlanViewer
           floorPlanSrc={store.floorPlan}
@@ -129,12 +63,10 @@ export default function StorePage() {
         onSelect={handleZoneSelect}
       />
 
-      {/* Feedback buttons + Submit - always visible */}
+      {/* Feedback buttons + Submit */}
       <FeedbackPanel
         selectedZoneId={selectedZoneId}
-        selectedSlotId={selectedSlotId}
         onSubmit={submit}
-        onSlotComplete={handleSlotComplete}
       />
 
       {/* Footer */}
