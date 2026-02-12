@@ -33,6 +33,15 @@ export function getNextSlot(): TimeSlot | null {
   return TIME_SLOTS.find((s) => s.startHour > hour) ?? null;
 }
 
+// Check if a slot is selectable (current or past today, not future)
+export function isSlotSelectable(slotId: string): boolean {
+  const hour = getBangkokHour();
+  const slot = TIME_SLOTS.find((s) => s.id === slotId);
+  if (!slot) return false;
+  // Slot is selectable if we've reached its start hour (past or current)
+  return hour >= slot.startHour;
+}
+
 export function getNextSlotTime(): string | null {
   const next = getNextSlot();
   if (!next) return null;

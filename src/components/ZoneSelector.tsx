@@ -11,8 +11,8 @@ interface ZoneSelectorProps {
 
 export default function ZoneSelector({ zones, selectedZoneId, onSelect }: ZoneSelectorProps) {
   return (
-    <div className="px-6 pt-4 pb-2">
-      <label className="mb-2 block text-[14px] font-normal text-[#9CA3AF]">
+    <div className="px-5 pt-2 pb-1">
+      <label className="mb-1.5 block text-[13px] font-normal text-[#9CA3AF]">
         Select Zone
       </label>
       <div className="relative">

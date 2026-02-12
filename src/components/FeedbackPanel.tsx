@@ -4,12 +4,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, ThumbsUp, Snowflake } from 'lucide-react';
 import { FeedbackType } from '@/types';
-import { getCurrentSlot, getCompletedSlots, markSlotDone } from '@/lib/time-slots';
+import { getCompletedSlots, markSlotDone, TIME_SLOTS } from '@/lib/time-slots';
 
 interface FeedbackPanelProps {
   selectedZoneId: string | null;
+  selectedSlotId: string | null;
   onSubmit: (zoneId: string, feedback: FeedbackType) => boolean;
-  onSlotComplete: () => void; // notify parent to refresh tracker
+  onSlotComplete: () => void;
 }
 
 const options: {
@@ -26,6 +27,7 @@ const options: {
 
 export default function FeedbackPanel({
   selectedZoneId,
+  selectedSlotId,
   onSubmit,
   onSlotComplete,
 }: FeedbackPanelProps) {
@@ -35,57 +37,49 @@ export default function FeedbackPanel({
 
   const isActive = selectedZoneId !== null;
 
-  // Reset on zone change + check if current slot already submitted
+  // Reset on zone or slot change + check if selected slot already submitted
   useEffect(() => {
     setSelected(null);
     setShowSuccess(false);
-    if (selectedZoneId) {
-      const currentSlot = getCurrentSlot();
-      if (currentSlot) {
-        const done = getCompletedSlots(selectedZoneId);
-        setSlotAlreadyDone(done.has(currentSlot.id));
-      } else {
-        setSlotAlreadyDone(false);
-      }
+    if (selectedZoneId && selectedSlotId) {
+      const done = getCompletedSlots(selectedZoneId);
+      setSlotAlreadyDone(done.has(selectedSlotId));
     } else {
       setSlotAlreadyDone(false);
     }
-  }, [selectedZoneId]);
+  }, [selectedZoneId, selectedSlotId]);
 
   const handleTap = useCallback((type: FeedbackType) => {
-    if (!isActive || slotAlreadyDone) return;
+    if (!isActive || slotAlreadyDone || !selectedSlotId) return;
     setSelected(type);
-  }, [isActive, slotAlreadyDone]);
+  }, [isActive, slotAlreadyDone, selectedSlotId]);
 
   const handleSubmit = useCallback(() => {
-    if (!selectedZoneId || !selected || slotAlreadyDone) return;
+    if (!selectedZoneId || !selected || slotAlreadyDone || !selectedSlotId) return;
     const ok = onSubmit(selectedZoneId, selected);
     if (ok) {
-      // Mark the current time slot as done
-      const currentSlot = getCurrentSlot();
-      if (currentSlot) {
-        markSlotDone(selectedZoneId, currentSlot.id);
-      }
+      markSlotDone(selectedZoneId, selectedSlotId);
       setShowSuccess(true);
       setSelected(null);
       setSlotAlreadyDone(true);
       onSlotComplete();
       setTimeout(() => setShowSuccess(false), 2500);
     }
-  }, [selectedZoneId, selected, slotAlreadyDone, onSubmit, onSlotComplete]);
+  }, [selectedZoneId, selected, slotAlreadyDone, selectedSlotId, onSubmit, onSlotComplete]);
 
-  const currentSlot = getCurrentSlot();
-  const disabled = !isActive || slotAlreadyDone;
-  const noActiveSlot = !currentSlot;
+  const disabled = !isActive || slotAlreadyDone || !selectedSlotId;
+  const slotLabel = selectedSlotId
+    ? TIME_SLOTS.find((s) => s.id === selectedSlotId)?.label
+    : null;
 
   return (
-    <div className="px-6 pt-4 pb-2">
-      <label className="mb-3 block text-[14px] font-normal text-[#9CA3AF]">
-        Your Feedback
+    <div className="px-5 pt-3 pb-2">
+      <label className="mb-2 block text-[13px] font-normal text-[#9CA3AF]">
+        Your Feedback{slotLabel ? ` — ${slotLabel}` : ''}
       </label>
 
       {/* Feedback pills */}
-      <div className="flex gap-3">
+      <div className="flex gap-2.5">
         {options.map((opt) => {
           const Icon = opt.icon;
           const isChosen = selected === opt.type;
@@ -94,17 +88,17 @@ export default function FeedbackPanel({
             <button
               key={opt.type}
               onClick={() => handleTap(opt.type)}
-              disabled={disabled || noActiveSlot}
-              className="flex flex-1 flex-col items-center gap-1.5 rounded-2xl border-2 py-4 transition-all duration-150 active:scale-[0.97]"
+              disabled={disabled}
+              className="flex flex-1 flex-col items-center gap-1 rounded-2xl border-2 py-3 transition-all duration-150 active:scale-[0.97]"
               style={{
                 backgroundColor: isChosen ? opt.bgColor : '#F9FAFB',
                 borderColor: isChosen ? opt.color : '#E5E7EB',
-                opacity: disabled || noActiveSlot ? 0.4 : 1,
-                cursor: disabled || noActiveSlot ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.4 : 1,
+                cursor: disabled ? 'not-allowed' : 'pointer',
               }}
             >
-              <Icon size={24} color={opt.color} strokeWidth={isChosen ? 2.5 : 1.8} />
-              <span className="text-[14px] font-semibold" style={{ color: opt.color }}>
+              <Icon size={22} color={opt.color} strokeWidth={isChosen ? 2.5 : 1.8} />
+              <span className="text-[13px] font-semibold" style={{ color: opt.color }}>
                 {opt.label}
               </span>
             </button>
@@ -113,27 +107,27 @@ export default function FeedbackPanel({
       </div>
 
       {/* Status messages */}
-      {noActiveSlot && isActive && (
-        <p className="mt-2 text-center text-[12px] text-[#9CA3AF]">
-          No active feedback round right now
+      {!selectedSlotId && isActive && (
+        <p className="mt-1.5 text-center text-[11px] text-[#9CA3AF]">
+          Select a time slot above
         </p>
       )}
-      {slotAlreadyDone && isActive && !noActiveSlot && (
-        <p className="mt-2 text-center text-[12px] text-[#43A452]">
-          {currentSlot.label} round already submitted
+      {slotAlreadyDone && isActive && selectedSlotId && (
+        <p className="mt-1.5 text-center text-[11px] text-[#43A452]">
+          {slotLabel} round already submitted
         </p>
       )}
 
       {/* Submit button */}
       <button
         onClick={handleSubmit}
-        disabled={!isActive || !selected || slotAlreadyDone || noActiveSlot}
-        className="mt-5 w-full rounded-xl py-3.5 text-[16px] font-semibold text-white transition-all duration-150 active:scale-[0.98]"
+        disabled={!isActive || !selected || slotAlreadyDone || !selectedSlotId}
+        className="mt-3 w-full rounded-xl py-3 text-[15px] font-semibold text-white transition-all duration-150 active:scale-[0.98]"
         style={{
-          background: (!isActive || !selected || slotAlreadyDone || noActiveSlot)
+          background: (!isActive || !selected || slotAlreadyDone || !selectedSlotId)
             ? '#CBD5E1'
             : 'linear-gradient(77.25deg, #0E7EE4 9.22%, #14B8B4 90.78%)',
-          cursor: (!isActive || !selected || slotAlreadyDone || noActiveSlot) ? 'not-allowed' : 'pointer',
+          cursor: (!isActive || !selected || slotAlreadyDone || !selectedSlotId) ? 'not-allowed' : 'pointer',
         }}
       >
         Submit
@@ -146,13 +140,13 @@ export default function FeedbackPanel({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="mt-3 flex items-center justify-center gap-2"
+            className="mt-2 flex items-center justify-center gap-2"
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
               <circle cx="9" cy="9" r="8" stroke="#43A452" strokeWidth="1.5" />
               <path d="M5.5 9.5L7.5 11.5L12.5 6.5" stroke="#43A452" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="text-[14px] font-medium text-[#43A452]">
+            <span className="text-[13px] font-medium text-[#43A452]">
               Thank you for your feedback!
             </span>
           </motion.div>
