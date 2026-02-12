@@ -57,7 +57,7 @@ export default function StorePage() {
       </div>
 
       {/* Floor plan */}
-      <div className="px-6 pt-4">
+      <div className="px-3 pt-4">
         <FloorPlanViewer
           floorPlanSrc={store.floorPlan}
           zones={store.zones}

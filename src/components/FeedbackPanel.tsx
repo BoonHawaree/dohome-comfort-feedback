@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, ThumbsUp, Snowflake } from 'lucide-react';
 import { FeedbackType } from '@/types';
@@ -59,8 +59,13 @@ export default function FeedbackPanel({
   const cooldownSec = Math.ceil(cooldownRemaining / 1000);
   const isActive = selectedZoneId !== null;
 
-  // Sync selected with current feedback when zone changes
-  const activeSelection = selected ?? currentFeedback;
+  // Reset selection when zone changes
+  useEffect(() => {
+    setSelected(null);
+    setShowSuccess(false);
+  }, [selectedZoneId]);
+
+  const activeSelection = selected;
 
   const handleTap = useCallback((type: FeedbackType) => {
     if (!isActive || hasCooldown) return;

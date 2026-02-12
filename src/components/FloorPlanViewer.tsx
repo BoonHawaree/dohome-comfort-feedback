@@ -91,7 +91,7 @@ export default function FloorPlanViewer({
           const centerY = zone.polygon.reduce((s, [, y]) => s + y, 0) / zone.polygon.length;
 
           const badgeColor = getBadgeColor(feedback, isSelected, hasAnySelection);
-          const badgeRadius = isSelected ? 2.8 : 2.4;
+          const badgeRadius = isSelected ? 3.2 : 2.8;
 
           return (
             <g key={zone.id} onClick={() => onZoneSelect(zone.id)} className="cursor-pointer">
@@ -118,7 +118,7 @@ export default function FloorPlanViewer({
                 textAnchor="middle"
                 dominantBaseline="central"
                 fill={getBadgeTextColor(isSelected, hasAnySelection)}
-                fontSize={isSelected ? '2.4' : '2'}
+                fontSize={isSelected ? '3' : '2.6'}
                 fontWeight="700"
                 fontFamily="Inter, sans-serif"
                 style={{ pointerEvents: 'none' }}
